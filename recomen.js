@@ -43,7 +43,6 @@ var predictionio = function (app_key, options) {
         if (obj.hasOwnProperty(p)) {
           str.push(encodeURIComponent(p) + "=" + encodeURIComponent(obj[p]));
         }
-        console.log(APP_KEY);
       str.push("accessKey=" + APP_KEY);
       return str.join("&");
     };
@@ -152,8 +151,6 @@ var predictionio = function (app_key, options) {
       "eventTime" : date_string
     }
 
-    console.log(params);
-
     return params;
   }
 
@@ -202,24 +199,45 @@ var predictionio = function (app_key, options) {
 
 var ren_track;
 
-function register(accessKey) {
-  ren_track = predictionio(accessKey, {});
+function register(accessKey, businessId) {
+  console.log("registering ren");
+  document.cookie = 'ren_ak=' + accessKey + ';domain=' + window.location.hostname +';samesite=strict;';
+  document.cookie = 'ren_bi=' + businessId + ';domain=' + window.location.hostname +';samesite=strict;';
 }
 
 function event(event_name, uid, iid){
   if (typeof ren_track === 'undefined') {
-    console.log("tracker not registered")
-  } else {
-    if(event_name === "buy"){
-      console.log("buying " + uid + " " + iid);
-      ren_track.buy({"uid":uid, "iid":iid}, function(){});
-    } else if (event_name === "view"){
-      console.log("viewing " + uid + " " + iid);
-      ren_track.view({"uid":uid, "iid":iid}, function(){});
-    } else {
-      console.log("undefined event_name");
-    }
+    var accessKey = getCookie('ren_ak');
+    ren_track = predictionio(accessKey, {});
   }
+  
+  if(event_name === "buy"){
+    var businessId = getCookie('ren_bi');
+    console.log("buying " + uid + " " + iid + " " + businessId);
+    ren_track.buy({"uid":businessId+";"+uid, "iid":businessId+";"+iid}, function(){});
+  } else if (event_name === "view"){
+    var businessId = getCookie('ren_bi');
+    console.log("viewing " + uid + " " + iid + " " + businessId);
+    ren_track.view({"uid":businessId+";"+uid, "iid":businessId+";"+iid}, function(){});
+  } else {
+    console.log("undefined event_name");
+  }
+}
+
+function getCookie(cname) {
+    var name = cname + "=";
+    var decodedCookie = decodeURIComponent(document.cookie);
+    var ca = decodedCookie.split(';');
+    for(var i = 0; i <ca.length; i++) {
+        var c = ca[i];
+        while (c.charAt(0) == ' ') {
+            c = c.substring(1);
+        }
+        if (c.indexOf(name) == 0) {
+            return c.substring(name.length, c.length);
+        }
+    }
+    return "";
 }
 
 window.ren = window.ren || function() {
@@ -231,17 +249,16 @@ var qq = window.ren.q;
 window.ren = function() {
   if(arguments[0] === "exec"){
     for (var i = 0; i < qq.length; i++) {
-      console.log("command " + i + " " + qq[i][0]);
       var comd = qq[i];
       if(comd[0] == "register"){
-        register(comd[1]);
+        register(comd[1], comd[2]);
       } else {
         event(comd[0], comd[1], comd[2]);
       }
     }
   } else{
     if(arguments[0] == "register"){
-      register(arguments[1]);
+      register(arguments[1], arguments[2]);
     } else {
       event(arguments[0], arguments[1], arguments[2]);
     }
